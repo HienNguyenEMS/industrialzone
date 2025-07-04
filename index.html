@@ -1,0 +1,347 @@
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard | Phần Mềm Quản Lý Khu Công Nghiệp</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css"/>
+
+    <style>
+        :root { --sidebar-width: 280px; --sidebar-collapsed-width: 80px; --header-height: 70px; }
+        body { background-color: #f4f7fa; }
+        .sidebar { width: var(--sidebar-width); height: 100vh; position: fixed; top: 0; left: 0; z-index: 1030; transition: width 0.3s ease-in-out; }
+        .main-wrapper { margin-left: var(--sidebar-width); transition: margin-left 0.3s ease-in-out; }
+        body.sidebar-collapsed .sidebar { width: var(--sidebar-collapsed-width); }
+        body.sidebar-collapsed .main-wrapper { margin-left: var(--sidebar-collapsed-width); }
+        body.sidebar-collapsed .sidebar .nav-link span, body.sidebar-collapsed .sidebar .submenu, body.sidebar-collapsed .sidebar .nav-link[data-bs-toggle="collapse"]::after { opacity: 0; width: 0; height: 0; overflow: hidden; }
+        body.sidebar-collapsed .sidebar .nav-link { justify-content: center; }
+        body.sidebar-collapsed .sidebar .nav-link .bi { margin-right: 0; }
+        .main-header { height: var(--header-height); display: flex; align-items: center; justify-content: space-between; padding: 0 24px; background-color: #fff; border-bottom: 1px solid #dee2e6; position: sticky; top: 0; z-index: 1020; }
+        .sidebar-header { height: var(--header-height); display: flex; align-items: center; justify-content: center; padding: 0 1rem; }
+        .sidebar-header .logo { max-height: 40px; }
+        .sidebar-nav { height: calc(100vh - var(--header-height)); overflow-y: auto; padding: 1rem; }
+        .sidebar .nav-link { font-size: 0.9rem; color: rgba(255, 255, 255, 0.8); padding: 10px 15px; border-radius: 0.375rem; margin-bottom: 2px; white-space: nowrap; overflow: hidden; }
+        .sidebar .nav-link:hover, .sidebar .nav-link.active { color: #fff; background-color: rgba(255, 255, 255, 0.15); }
+        .sidebar .submenu .nav-link { font-size: 0.85rem; padding-left: 2.5rem; }
+        .card { border: none; box-shadow: 0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.05); }
+        #map { height: 400px; width: 100%; border-radius: 0.375rem; }
+        @media (max-width: 991.98px) {
+            body.sidebar-collapsed .sidebar, .sidebar { width: var(--sidebar-width); transform: translateX(calc(-1 * var(--sidebar-width))); }
+            body.sidebar-collapsed .main-wrapper, .main-wrapper { margin-left: 0; }
+            .sidebar.visible { transform: translateX(0); }
+        }
+    </style>
+</head>
+<body>
+    <!-- ================== SIDEBAR MENU ================== -->
+    <aside class="sidebar bg-dark text-white d-flex flex-column">
+        <div class="sidebar-header"><a href="#" data-view="dashboard"><img src="https://gpems.net/_next/image?url=%2Flogo-ico.png&w=64&q=75" alt="GPEMS Logo" class="logo"></a></div>
+        <nav class="sidebar-nav">
+            <ul class="nav nav-pills flex-column">
+                 <li class="nav-item"><a href="#" class="nav-link active" data-view="dashboard"><i class="bi bi-speedometer2 me-3"></i><span>Tổng quan</span></a></li>
+                <li class="nav-item"><a href="#customerSubmenu" data-bs-toggle="collapse" class="nav-link"><i class="bi bi-people-fill me-3"></i><span>Khách hàng</span></a>
+                    <ul class="collapse list-unstyled submenu" id="customerSubmenu">
+                        <li><a href="#" class="nav-link" data-view="customers">Danh sách khách hàng</a></li>
+                    </ul>
+                </li>
+                <li class="nav-item"><a href="#" class="nav-link" data-view="contracts"><i class="bi bi-file-earmark-text-fill me-3"></i><span>Hợp đồng</span></a></li>
+                <li class="nav-item"><a href="#serviceSubmenu" data-bs-toggle="collapse" class="nav-link"><i class="bi bi-droplet-half me-3"></i><span>Dịch vụ</span></a>
+                     <ul class="collapse list-unstyled submenu" id="serviceSubmenu">
+                        <li><a href="#" class="nav-link" data-view="meter-reading">Ghi chỉ số</a></li>
+                    </ul>
+                </li>
+                <li class="nav-item"><a href="#gisSubmenu" data-bs-toggle="collapse" class="nav-link"><i class="bi bi-map-fill me-3"></i><span>Đất đai & GIS</span></a>
+                     <ul class="collapse list-unstyled submenu" id="gisSubmenu">
+                        <li><a href="#" class="nav-link" data-view="land-lots">Quản lý lô đất</a></li>
+                    </ul>
+                </li>
+                <li class="nav-item"><a href="#assetSubmenu" data-bs-toggle="collapse" class="nav-link"><i class="bi bi-building-gear me-3"></i><span>Tài sản & Bảo trì</span></a>
+                    <ul class="collapse list-unstyled submenu" id="assetSubmenu">
+                        <li><a href="#" class="nav-link" data-view="assets">Danh mục tài sản</a></li>
+                        <li><a href="#" class="nav-link" data-view="maintenance-schedule">Lịch bảo trì</a></li>
+                    </ul>
+                </li>
+                 <li class="nav-item"><a href="#accountingSubmenu" data-bs-toggle="collapse" class="nav-link"><i class="bi bi-wallet2 me-3"></i><span>Kế toán</span></a>
+                     <ul class="collapse list-unstyled submenu" id="accountingSubmenu">
+                        <li><a href="#" class="nav-link" data-view="receivables">Công nợ phải thu</a></li>
+                    </ul>
+                </li>
+                 <li class="nav-item"><a href="#" class="nav-link" data-view="feedback"><i class="bi bi-megaphone-fill me-3"></i><span>Thông báo & Phản ánh</span></a></li>
+                <li class="nav-item"><a href="#" class="nav-link" data-view="crm"><i class="bi bi-funnel-fill me-3"></i><span>CRM</span></a></li>
+                 <li class="nav-item"><a href="#" class="nav-link" data-view="categories"><i class="bi bi-journal-bookmark-fill me-3"></i><span>Danh mục hệ thống</span></a></li>
+                <li class="nav-item"><a href="#adminSubmenu" data-bs-toggle="collapse" class="nav-link"><i class="bi bi-person-fill-gear me-3"></i><span>Quản trị</span></a>
+                    <ul class="collapse list-unstyled submenu" id="adminSubmenu">
+                        <li><a href="#" class="nav-link" data-view="users">Người dùng</a></li>
+                        <li><a href="#" class="nav-link" data-view="permissions">Phân quyền</a></li>
+                    </ul>
+                </li>
+            </ul>
+        </nav>
+    </aside>
+
+    <!-- ================== MAIN CONTENT WRAPPER ================== -->
+    <div class="main-wrapper">
+        <header class="main-header">
+             <div class="d-flex align-items-center">
+                <button class="btn d-none d-lg-block" type="button" id="desktop-sidebar-toggle-btn"><i class="bi bi-list fs-3"></i></button>
+                <button class="btn d-lg-none" type="button" id="mobile-sidebar-toggle-btn"><i class="bi bi-list fs-3"></i></button>
+            </div>
+            <div class="ms-auto d-flex align-items-center">
+                <div class="input-group d-none d-md-flex" style="width: 300px;"><input type="text" class="form-control" placeholder="Tìm kiếm..."><button class="btn btn-outline-secondary" type="button"><i class="bi bi-search"></i></button></div>
+                <div class="ms-3 position-relative"><a href="#" class="text-secondary"><i class="bi bi-bell-fill fs-4"></i><span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">5</span></a></div>
+                <div class="dropdown ms-3">
+                    <a href="#" class="d-flex align-items-center text-dark text-decoration-none dropdown-toggle" data-bs-toggle="dropdown"><img src="https://i.pravatar.cc/40?u=admin" alt="" width="40" height="40" class="rounded-circle me-2"><div><strong class="d-block">Lê Minh Anh</strong><small class="text-muted">Quản trị viên</small></div></a>
+                    <ul class="dropdown-menu dropdown-menu-end shadow"><li><a class="dropdown-item" href="#">Đăng xuất</a></li></ul>
+                </div>
+            </div>
+        </header>
+        <main class="p-4" id="main-content-area"><!-- Nội dung được nạp bằng JS --></main>
+    </div>
+    
+    <!-- ======================================================= -->
+    <!-- |              TEMPLATES FOR ALL VIEWS                | -->
+    <!-- ======================================================= -->
+    
+    <!-- TEMPLATE: Dashboard (Màn hình chính) -->
+    <template id="view-dashboard">
+        <section class="mb-4">
+            <div class="row">
+                <div class="col-xl-4 col-lg-6 mb-4"><div class="card h-100"><div class="card-body"> <h6 class="text-muted mb-1">Doanh Thu Tháng</h6> <h3 class="fw-bold mb-0">3.25 Tỷ</h3> </div></div></div>
+                <div class="col-xl-2 col-lg-6 mb-4"><div class="card h-100"><div class="card-body"> <h6 class="text-muted mb-1">Tỷ Lệ Lấp Đầy</h6> <h3 class="fw-bold mb-0">85.6%</h3></div></div></div>
+                <div class="col-xl-2 col-lg-6 mb-4"><div class="card h-100"><div class="card-body"> <h6 class="text-muted mb-1">HĐ Sắp Hết Hạn</h6> <h3 class="fw-bold mb-0">8</h3></div></div></div>
+                <div class="col-xl-4 col-lg-6 mb-4"><div class="card h-100"><div class="card-body"> <h6 class="text-muted mb-1">Công Nợ Phải Thu</h6> <h3 class="fw-bold text-danger mb-0">1.25 Tỷ</h3></div></div></div>
+                <div class="col-xl-4 col-lg-6 mb-4"><div class="card h-100"><div class="card-body"> <h6 class="text-muted mb-1">Phản Ánh/Yêu Cầu Mới</h6> <h3 class="fw-bold mb-0">5</h3></div></div></div>
+                <div class="col-xl-4 col-lg-6 mb-4"><div class="card h-100"><div class="card-body"> <h6 class="text-muted mb-1">Tài Sản Cần Bảo Trì</h6> <h3 class="fw-bold mb-0">3</h3></div></div></div>
+                <div class="col-xl-4 col-lg-6 mb-4"><div class="card h-100"><div class="card-body"> <h6 class="text-muted mb-1">Khách Hàng Tiềm Năng</h6> <h3 class="fw-bold mb-0">6</h3></div></div></div>
+            </div>
+        </section>
+        <div class="row">
+            <div class="col-xl-7 mb-4"><div class="card"><div class="card-header bg-white"><h5 class="card-title mb-0">Bản Đồ Hiện Trạng</h5></div><div class="card-body p-0"><div id="map"></div></div></div></div>
+            <div class="col-xl-5 mb-4"><div class="card"><div class="card-header bg-white"><h5 class="card-title mb-0">Hoạt Động Gần Đây</h5></div><div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item">Admin đã cập nhật thông tin cho <a href="#">Công ty TNHH ABC</a>. <span class="text-muted small">15 phút trước</span></li>
+                    <li class="list-group-item">Kế toán đã xác nhận thanh toán cho <a href="#">Tập đoàn XYZ</a>. <span class="text-muted small">1 giờ trước</span></li>
+                    <li class="list-group-item">Hệ thống đã gửi thông báo phí dịch vụ tháng 12. <span class="text-muted small">Hôm qua</span></li>
+                </ul>
+            </div></div></div>
+        </div>
+    </template>
+    
+    <!-- TEMPLATE: Generic CRUD (Dùng cho các view đơn giản) -->
+    <template id="view-crud-template">
+        <h3 class="mb-4" id="crud-title"></h3>
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div class="input-group" style="width: 300px;"><input type="text" class="form-control" placeholder="Tìm kiếm..."><button class="btn btn-outline-secondary" type="button"><i class="bi bi-search"></i></button></div>
+                    <button class="btn btn-primary"><i class="bi bi-plus-circle me-2"></i>Thêm Mới</button>
+                </div>
+                <div class="table-responsive" id="crud-table-container"></div>
+            </div>
+        </div>
+    </template>
+    
+    <!-- TEMPLATE: CRM (Dạng Kanban) -->
+    <template id="view-crm">
+        <h3 class="mb-4">Pipeline Khách Hàng Tiềm Năng</h3>
+        <div class="row">
+            <div class="col-md-3"><div class="kanban-column"><h6>Mới & Tiếp Cận (3)</h6><div class="card my-2"><div class="card-body p-2"><p class="fw-bold mb-1 small">Công ty Logistics A&B</p></div></div></div></div>
+            <div class="col-md-3"><div class="kanban-column"><h6>Đã Báo Giá (1)</h6><div class="card my-2"><div class="card-body p-2"><p class="fw-bold mb-1 small">Công ty Thực phẩm GreenFeed</p></div></div></div></div>
+            <div class="col-md-3"><div class="kanban-column"><h6>Đang Đàm Phán (1)</h6><div class="card my-2"><div class="card-body p-2"><p class="fw-bold mb-1 small">Công ty Dược phẩm Pharma</p></div></div></div></div>
+            <div class="col-md-3"><div class="kanban-column"><h6>Chuẩn Bị Ký HĐ (1)</h6><div class="card my-2"><div class="card-body p-2"><p class="fw-bold mb-1 small">Công ty Năng lượng SunPower</p></div></div></div></div>
+        </div>
+    </template>
+    
+     <!-- TEMPLATE: Phân quyền -->
+    <template id="view-permissions">
+        <h3 class="mb-4">Phân Quyền Vai Trò</h3>
+        <div class="card"><div class="card-body"><div class="row">
+            <div class="col-md-4">
+                <h6>Chọn vai trò:</h6>
+                <div class="list-group">
+                  <a href="#" class="list-group-item list-group-item-action active">Quản trị viên</a>
+                  <a href="#" class="list-group-item list-group-item-action">Kế toán</a>
+                  <a href="#" class="list-group-item list-group-item-action">Kinh doanh</a>
+                </div>
+            </div>
+            <div class="col-md-8">
+                <h6>Thiết lập quyền cho vai trò: <strong class="text-primary">Quản trị viên</strong></h6>
+                <table class="table table-bordered mt-2">
+                    <thead class="table-light"><tr><th>Chức năng</th><th class="text-center">Xem</th><th class="text-center">Thêm</th><th class="text-center">Sửa</th><th class="text-center">Xóa</th></tr></thead>
+                    <tbody>
+                        <tr><td>Khách hàng</td>
+                            <td class="text-center"><input class="form-check-input" type="checkbox" checked></td><td class="text-center"><input class="form-check-input" type="checkbox" checked></td>
+                            <td class="text-center"><input class="form-check-input" type="checkbox" checked></td><td class="text-center"><input class="form-check-input" type="checkbox" checked></td>
+                        </tr>
+                        <tr><td>Hợp đồng</td>
+                             <td class="text-center"><input class="form-check-input" type="checkbox" checked></td><td class="text-center"><input class="form-check-input" type="checkbox" checked></td>
+                            <td class="text-center"><input class="form-check-input" type="checkbox" checked></td><td class="text-center"><input class="form-check-input" type="checkbox" ></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div></div></div>
+    </template>
+
+    <!-- JS Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const mainContentArea = document.getElementById('main-content-area');
+            const navLinks = document.querySelectorAll('.sidebar .nav-link');
+            const body = document.body;
+
+            // --- BẢNG DỮ LIỆU MẪU (ĐÃ SỬA LỖI VÀ BỔ SUNG ĐẦY ĐỦ) ---
+            const viewData = {
+                customers: {
+                    title: 'Quản lý Khách hàng',
+                    table: `<table class="table table-hover"><thead><tr><th>Tên Công Ty</th><th>MST</th><th>Trạng Thái</th><th class="text-center">Hành Động</th></tr></thead>
+                            <tbody>
+                                <tr><td>Công ty TNHH Điện tử Samsung Vina</td><td>0301111222</td><td><span class="badge bg-success">Hoạt động</span></td><td class="text-center"><button class="btn btn-sm btn-outline-primary me-1"><i class="bi bi-pencil-fill"></i></button><button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash-fill"></i></button></td></tr>
+                                <tr><td>Công ty CP Dệt May Thành Công</td><td>0302222333</td><td><span class="badge bg-success">Hoạt động</span></td><td class="text-center"><button class="btn btn-sm btn-outline-primary me-1"><i class="bi bi-pencil-fill"></i></button><button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash-fill"></i></button></td></tr>
+                                <tr><td>Tập đoàn Foxconn Technology</td><td>0303333444</td><td><span class="badge bg-secondary">Ngừng hoạt động</span></td><td class="text-center"><button class="btn btn-sm btn-outline-primary me-1"><i class="bi bi-pencil-fill"></i></button><button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash-fill"></i></button></td></tr>
+                            </tbody></table>`
+                },
+                contracts: {
+                    title: 'Quản lý Hợp đồng',
+                    table: `<table class="table table-hover"><thead><tr><th>Số HĐ</th><th>Khách Hàng</th><th>Ngày Hết Hạn</th><th>Trạng Thái</th><th class="text-center">Hành Động</th></tr></thead>
+                            <tbody>
+                                <tr><td>HD-SS-001</td><td>Công ty TNHH Điện tử Samsung Vina</td><td>31/12/2030</td><td><span class="badge bg-success">Còn hiệu lực</span></td><td class="text-center"><button class="btn btn-sm btn-outline-primary me-1"><i class="bi bi-pencil-fill"></i></button><button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash-fill"></i></button></td></tr>
+                                <tr><td>HD-TC-002</td><td>Công ty CP Dệt May Thành Công</td><td>30/06/2025</td><td><span class="badge bg-warning text-dark">Sắp hết hạn</span></td><td class="text-center"><button class="btn btn-sm btn-outline-primary me-1"><i class="bi bi-pencil-fill"></i></button><button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash-fill"></i></button></td></tr>
+                                <tr><td>HD-FX-003</td><td>Tập đoàn Foxconn Technology</td><td>31/12/2023</td><td><span class="badge bg-danger">Đã hết hạn</span></td><td class="text-center"><button class="btn btn-sm btn-outline-primary me-1"><i class="bi bi-pencil-fill"></i></button><button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash-fill"></i></button></td></tr>
+                            </tbody></table>`
+                },
+                'meter-reading': {
+                    title: 'Ghi chỉ số Điện/Nước',
+                    table: `<table class="table table-hover"><thead><tr><th>Khách hàng</th><th>Dịch vụ</th><th>Chỉ số cũ</th><th>Chỉ số mới</th><th>Ngày ghi</th><th class="text-center">Hành Động</th></tr></thead>
+                            <tbody>
+                                <tr><td>Công ty TNHH Điện tử Samsung Vina</td><td>Điện</td><td>15000</td><td><input type="number" class="form-control form-control-sm" value="17500"></td><td>01/07/2024</td><td class="text-center"><button class="btn btn-sm btn-outline-success me-1"><i class="bi bi-check-lg"></i></button></td></tr>
+                                <tr><td>Công ty CP Dệt May Thành Công</td><td>Điện</td><td>8000</td><td><input type="number" class="form-control form-control-sm" value="9200"></td><td>01/07/2024</td><td class="text-center"><button class="btn btn-sm btn-outline-success me-1"><i class="bi bi-check-lg"></i></button></td></tr>
+                                <tr><td>Công ty TNHH Điện tử Samsung Vina</td><td>Nước</td><td>500</td><td><input type="number" class="form-control form-control-sm" value="650"></td><td>01/07/2024</td><td class="text-center"><button class="btn btn-sm btn-outline-success me-1"><i class="bi bi-check-lg"></i></button></td></tr>
+                            </tbody></table>`
+                },
+                'land-lots': {
+                    title: 'Quản lý Lô đất',
+                    table: `<table class="table table-hover"><thead><tr><th>Mã Lô</th><th>Diện tích (m²)</th><th>Khách hàng đang thuê</th><th>Trạng thái</th><th class="text-center">Hành Động</th></tr></thead>
+                            <tbody>
+                                <tr><td>A-12</td><td>10,000</td><td>Công ty TNHH Điện tử Samsung Vina</td><td><span class="badge bg-danger">Đã cho thuê</span></td><td class="text-center"><button class="btn btn-sm btn-outline-primary me-1"><i class="bi bi-pencil-fill"></i></button><button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash-fill"></i></button></td></tr>
+                                <tr><td>B-05</td><td>5,000</td><td>-</td><td><span class="badge bg-success">Còn trống</span></td><td class="text-center"><button class="btn btn-sm btn-outline-primary me-1"><i class="bi bi-pencil-fill"></i></button><button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash-fill"></i></button></td></tr>
+                                <tr><td>C-08</td><td>7,500</td><td>Công ty CP Dệt May Thành Công</td><td><span class="badge bg-danger">Đã cho thuê</span></td><td class="text-center"><button class="btn btn-sm btn-outline-primary me-1"><i class="bi bi-pencil-fill"></i></button><button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash-fill"></i></button></td></tr>
+                            </tbody></table>`
+                },
+                assets: {
+                    title: 'Danh mục Tài sản',
+                    table: `<table class="table table-hover"><thead><tr><th>Mã TS</th><th>Tên Tài Sản</th><th>Loại</th><th>Trạng Thái</th><th class="text-center">Hành Động</th></tr></thead>
+                            <tbody>
+                                <tr><td>PCCC-001</td><td>Hệ thống báo cháy trung tâm khu A</td><td>PCCC</td><td><span class="badge bg-success">Tốt</span></td><td class="text-center"><button class="btn btn-sm btn-outline-primary me-1"><i class="bi bi-pencil-fill"></i></button><button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash-fill"></i></button></td></tr>
+                                <tr><td>XLNT-01</td><td>Trạm xử lý nước thải tập trung</td><td>Môi trường</td><td><span class="badge bg-warning text-dark">Cần bảo trì</span></td><td class="text-center"><button class="btn btn-sm btn-outline-primary me-1"><i class="bi bi-pencil-fill"></i></button><button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash-fill"></i></button></td></tr>
+                                <tr><td>DD-KCN-05</td><td>Đèn đường cao áp số 05</td><td>Hạ tầng</td><td><span class="badge bg-danger">Hỏng</span></td><td class="text-center"><button class="btn btn-sm btn-outline-primary me-1"><i class="bi bi-pencil-fill"></i></button><button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash-fill"></i></button></td></tr>
+                            </tbody></table>`
+                },
+                 'maintenance-schedule': {
+                    title: 'Lịch bảo trì',
+                    table: `<table class="table table-hover"><thead><tr><th>Tài sản</th><th>Ngày dự kiến</th><th>Đơn vị thực hiện</th><th>Trạng thái</th><th class="text-center">Hành Động</th></tr></thead>
+                            <tbody>
+                                <tr><td>Trạm xử lý nước thải tập trung</td><td>15/07/2024</td><td>Công ty Môi trường KCN</td><td><span class="badge bg-info">Sắp tới</span></td><td class="text-center"><button class="btn btn-sm btn-outline-primary me-1"><i class="bi bi-pencil-fill"></i></button><button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash-fill"></i></button></td></tr>
+                                <tr><td>Hệ thống PCCC khu A</td><td>30/06/2024</td><td>Nội bộ</td><td><span class="badge bg-success">Đã xong</span></td><td class="text-center"><button class="btn btn-sm btn-outline-primary me-1"><i class="bi bi-pencil-fill"></i></button><button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash-fill"></i></button></td></tr>
+                                 <tr><td>Hệ thống máy lạnh văn phòng</td><td>25/06/2024</td><td>Điện lạnh ABC</td><td><span class="badge bg-danger">Trễ hạn</span></td><td class="text-center"><button class="btn btn-sm btn-outline-primary me-1"><i class="bi bi-pencil-fill"></i></button><button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash-fill"></i></button></td></tr>
+                            </tbody></table>`
+                },
+                receivables: {
+                    title: 'Công nợ phải thu',
+                    table: `<table class="table table-hover"><thead><tr><th>Khách hàng</th><th>Số tiền (VND)</th><th>Hạn thanh toán</th><th>Trạng thái</th><th class="text-center">Hành Động</th></tr></thead>
+                            <tbody>
+                                <tr><td>Công ty TNHH ABC</td><td>150,000,000</td><td>15/07/2024</td><td><span class="badge bg-success">Trong hạn</span></td><td class="text-center"><button class="btn btn-sm btn-outline-primary me-1"><i class="bi bi-eye-fill"></i></button></td></tr>
+                                <tr><td>Tập đoàn XYZ</td><td>250,000,000</td><td>30/06/2024</td><td><span class="badge bg-danger">Quá hạn 10 ngày</span></td><td class="text-center"><button class="btn btn-sm btn-outline-primary me-1"><i class="bi bi-eye-fill"></i></button></td></tr>
+                                <tr><td>Công ty M&E</td><td>80,000,000</td><td>25/05/2024</td><td><span class="badge bg-secondary">Đã thanh toán</span></td><td class="text-center"><button class="btn btn-sm btn-outline-primary me-1"><i class="bi bi-eye-fill"></i></button></td></tr>
+                            </tbody></table>`
+                },
+                 feedback: {
+                    title: 'Thông tin phản ánh',
+                    table: `<table class="table table-hover"><thead><tr><th>Khách hàng</th><th>Nội dung</th><th>Ngày nhận</th><th>Trạng thái</th><th class="text-center">Hành Động</th></tr></thead>
+                            <tbody>
+                                <tr><td>Công ty M&E</td><td>Đèn đường tại khu C bị hỏng...</td><td>10/07/2024</td><td><span class="badge bg-danger">Mới</span></td><td class="text-center"><button class="btn btn-sm btn-outline-primary me-1"><i class="bi bi-pencil-fill"></i></button></td></tr>
+                                <tr><td>Công ty Dệt May Hòa Phát</td><td>Áp lực nước yếu vào giờ cao điểm...</td><td>09/07/2024</td><td><span class="badge bg-warning text-dark">Đang xử lý</span></td><td class="text-center"><button class="btn btn-sm btn-outline-primary me-1"><i class="bi bi-pencil-fill"></i></button></td></tr>
+                                <tr><td>Tập đoàn XYZ</td><td>Xin cấp thêm thẻ ra vào...</td><td>05/07/2024</td><td><span class="badge bg-success">Đã giải quyết</span></td><td class="text-center"><button class="btn btn-sm btn-outline-primary me-1"><i class="bi bi-pencil-fill"></i></button></td></tr>
+                            </tbody></table>`
+                },
+                 categories: {
+                    title: 'Danh mục hệ thống',
+                    table: `<table class="table table-hover"><thead><tr><th>Loại danh mục</th><th>Tên danh mục</th><th>Mã</th><th class="text-center">Hành Động</th></tr></thead>
+                            <tbody>
+                                <tr><td>Loại tài sản</td><td>Phòng cháy chữa cháy</td><td>PCCC</td><td class="text-center"><button class="btn btn-sm btn-outline-primary me-1"><i class="bi bi-pencil-fill"></i></button><button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash-fill"></i></button></td></tr>
+                                <tr><td>Loại khách hàng</td><td>Doanh nghiệp Chế xuất</td><td>DNCX</td><td class="text-center"><button class="btn btn-sm btn-outline-primary me-1"><i class="bi bi-pencil-fill"></i></button><button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash-fill"></i></button></td></tr>
+                                <tr><td>Loại dịch vụ</td><td>Thu gom rác thải nguy hại</td><td>RTNH</td><td class="text-center"><button class="btn btn-sm btn-outline-primary me-1"><i class="bi bi-pencil-fill"></i></button><button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash-fill"></i></button></td></tr>
+                            </tbody></table>`
+                },
+                 users: {
+                    title: 'Quản lý người dùng',
+                    table: `<table class="table table-hover"><thead><tr><th>Họ và tên</th><th>Tên đăng nhập</th><th>Vai trò</th><th class="text-center">Hành Động</th></tr></thead>
+                            <tbody>
+                                <tr><td>Lê Minh Anh</td><td>admin</td><td>Quản trị viên</td><td class="text-center"><button class="btn btn-sm btn-outline-primary me-1"><i class="bi bi-pencil-fill"></i></button><button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash-fill"></i></button></td></tr>
+                                <tr><td>Trần Bích Hạnh</td><td>hanhtb</td><td>Kế toán</td><td class="text-center"><button class="btn btn-sm btn-outline-primary me-1"><i class="bi bi-pencil-fill"></i></button><button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash-fill"></i></button></td></tr>
+                                <tr><td>Nguyễn Văn Dũng</td><td>dungnv</td><td>Kinh doanh</td><td class="text-center"><button class="btn btn-sm btn-outline-primary me-1"><i class="bi bi-pencil-fill"></i></button><button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash-fill"></i></button></td></tr>
+                            </tbody></table>`
+                },
+            };
+
+            // --- HÀM CHÍNH ĐỂ THAY ĐỔI VIEW ---
+            function showView(viewId) {
+                mainContentArea.innerHTML = '';
+                let viewTemplate;
+                
+                if (viewId === 'dashboard') {
+                    viewTemplate = document.getElementById('view-dashboard').content.cloneNode(true);
+                    mainContentArea.appendChild(viewTemplate);
+                    const mapElement = document.getElementById('map');
+                    if (mapElement && !mapElement._leaflet_id) {
+                        const map = L.map('map').setView([10.7769, 106.7009], 10);
+                        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+                    }
+                } else if (viewId === 'crm' || viewId === 'permissions') {
+                    viewTemplate = document.getElementById(`view-${viewId}`).content.cloneNode(true);
+                    mainContentArea.appendChild(viewTemplate);
+                } else {
+                    viewTemplate = document.getElementById('view-crud-template').content.cloneNode(true);
+                    const data = viewData[viewId] || { title: 'Chức năng đang phát triển', table: '<p class="p-5 text-center">Nội dung sẽ sớm được cập nhật.</p>' };
+                    viewTemplate.querySelector('#crud-title').textContent = data.title;
+                    viewTemplate.querySelector('#crud-table-container').innerHTML = data.table;
+                    mainContentArea.appendChild(viewTemplate);
+                }
+                
+                navLinks.forEach(link => {
+                    link.classList.remove('active');
+                    if (link.dataset.view === viewId) {
+                        link.classList.add('active');
+                    }
+                });
+            }
+
+            // --- GẮN SỰ KIỆN CLICK CHO CÁC LINK MENU ---
+            navLinks.forEach(link => {
+                if (link.dataset.view) {
+                    link.addEventListener('click', (event) => {
+                        event.preventDefault();
+                        showView(link.dataset.view);
+                        if (window.innerWidth < 992) {
+                             document.querySelector('.sidebar').classList.remove('visible');
+                        }
+                    });
+                }
+            });
+
+            // --- LOGIC ẨN/HIỆN SIDEBAR ---
+            document.getElementById('mobile-sidebar-toggle-btn')?.addEventListener('click', () => document.querySelector('.sidebar').classList.toggle('visible'));
+            document.getElementById('desktop-sidebar-toggle-btn')?.addEventListener('click', () => body.classList.toggle('sidebar-collapsed'));
+
+            // --- HIỂN THỊ VIEW MẶC ĐỊNH ---
+            showView('dashboard');
+        });
+    </script>
+</body>
+</html>
